@@ -1,27 +1,29 @@
-import 'package:grocery_app/data/categoris.dart';
-import 'package:grocery_app/models/categorry.dart';
+
 import 'package:grocery_app/models/grocery_item.dart';
+
+import '../models/category.dart';
+import 'categories.dart';
 
 final groceryItems = [
     GroceryItem(
         id : 'a',
         name : 'milk',
         quantity : 1,
-        category : categories[Categories.dairy]!
+        category : categoriesData[Categories.meat]!
     ),
 
     GroceryItem(
         id : 'b',
         name : 'Bananas',
         quantity : 5,
-        category : categories[Categories.fruit]!
+        category : categoriesData[Categories.fruit]!
     ),
 
     GroceryItem(
         id : 'c',
         name : 'Beef Steak',
         quantity : 1,
-        category : categories[Categories.meat]!
+        category : categoriesData[Categories.meat]!
     )
 
 ];

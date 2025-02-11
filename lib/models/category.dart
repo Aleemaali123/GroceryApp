@@ -14,9 +14,9 @@ enum Categories{
 }
 
 
-class Category {
+class CategoryModel {
   final String title;
   final Color color;
 
-  Category(this.title, this.color);
+  CategoryModel(this.title, this.color);
 }

@@ -1,33 +1,36 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
-import 'package:grocery_app/models/categorry.dart';
+// import 'package:grocery_app/models/categorry.dart';
+
+import '../models/category.dart';
 
 
 
-var categories = {
+var categoriesData = {
 
-  Categories.vegitables: Category(
+  Categories.vegitables: CategoryModel(
     'Vegitables',
-    Color.fromARGB(255,0,255,128),
+    Color.fromARGB(255, 0, 255, 128),
   ),
 
-   Categories.fruit: Category(
+  Categories.fruit: CategoryModel(
     'Fruit',
-    Color.fromARGB(255,145,255,0),
+    Color.fromARGB(255, 145, 255, 0),
   ),
 
-  Categories.meat: Category(
+  Categories.meat: CategoryModel(
     'Meat',
-    Color.fromARGB(255,255,102,0),
+    Color.fromARGB(255, 255, 102, 0),
   ),
 
-  Categories.dairy: Category(
+  Categories.dairy: CategoryModel(
     'Dairy',
-    Color.fromARGB(255,0,208,255),
+    Color.fromARGB(255, 0, 208, 255),
   ),
 
-  Categories.carbs: Category(
+  Categories.carbs: CategoryModel(
     'Carbs',
-    Color.fromARGB(255,0,60,255),
+    Color.fromARGB(255, 0, 60, 255),
   ),
-}
+
+};

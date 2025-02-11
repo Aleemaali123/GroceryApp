@@ -1,10 +1,12 @@
-import 'package:flutter/foundation.dart';
+
+
+import 'package:grocery_app/models/category.dart';
 
 class GroceryItem{
   final String id;
   final String name;
   final int quantity;
-  final Category category;
+  final CategoryModel category;
 
   GroceryItem({
    required this.id,
