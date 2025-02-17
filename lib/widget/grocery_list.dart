@@ -68,73 +68,118 @@ void loadItems()async{
       ),
     );
 
-    // if (newItem == null) {
-    //   return; // If the user cancels adding an item, do nothing.
-    // }
+    if (newItem != null) {
+      // Check if the item already exists by name
+      final existingItemIndex = groceryItem.indexWhere((item) => item.name == newItem.name);
 
-    if(newItem != null){
-      //check if the item already exists
-      final existingItemIndex = groceryItem.indexWhere((item)=>item.name == newItem.quantity);
-
-
-      if(existingItemIndex != -1){
-        //item already exists, update quantity
+      if (existingItemIndex != -1) {
+        // Item already exists, increment quantity by 1
+        final updatedQuantity = groceryItem[existingItemIndex].quantity + 1;
+        
         setState(() {
-          groceryItem[existingItemIndex].quantity + newItem.quantity;
+          groceryItem[existingItemIndex] = GroceryItem(
+            id: groceryItem[existingItemIndex].id,
+            name: groceryItem[existingItemIndex].name,
+            quantity: updatedQuantity,
+            category: groceryItem[existingItemIndex].category,
+          );
         });
 
-
-        //now update the quantity on firebase for the existing item
-
+        // Update the quantity on Firebase for the existing item
         final existingItemId = groceryItem[existingItemIndex].id;
-
         final url = Uri.https(
           'groceryapp-cf2a5-default-rtdb.firebaseio.com',
           '/shopping-List/$existingItemId.json',
         );
-        await http.patch(
-          url,
-          headers: {
-            'Content - Type': 'application/json'
-          },
-          body: json.encode({
 
-            'quantity':groceryItem[existingItemIndex].quantity,
+        try {
+          final response = await http.patch(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'quantity': updatedQuantity,
+            })
+          );
 
-          })
-        );
-      }
-      else{
-        //item doesnt exist, add item
+          if (response.statusCode >= 400) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to update quantity.'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            return;
+          }
+
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Updated quantity for ${newItem.name}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } catch (error) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to update quantity.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // Item doesn't exist, add as new item
         setState(() {
           groceryItem.add(newItem);
         });
 
-        //add to firebase
+        // Add to Firebase
         final url = Uri.https(
           'groceryapp-cf2a5-default-rtdb.firebaseio.com',
           '/shopping-List.json',
         );
-        await http.post(url,
-        headers: {
-          'Content-Type': 'application/json'
-        },
-          body: json.encode(
-            {
-              'name' : newItem.name,
-              'quantity' : newItem.quantity,
+
+        try {
+          final response = await http.post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'name': newItem.name,
+              'quantity': newItem.quantity,
               'category': newItem.category.title
-            }
-          )
+            })
+          );
 
+          if (response.statusCode >= 400) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to add item.'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            return;
+          }
 
-        );
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added ${newItem.name} to the list'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } catch (error) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to add item.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     }
-
-    // setState(() {
-    //   groceryItem.add(newItem!);
-    // });
   }
 
 
@@ -157,17 +202,100 @@ void loadItems()async{
         content=   ListView.builder(
         itemCount:groceryItem.length,
         itemBuilder: (context, index) => Dismissible(
-         onDismissed: (direction){
-              _removeItem(groceryItem[index]);
-         },
-          
-        
+          key: ValueKey(groceryItem[index].id),
+          background: Container(
+            color: Theme.of(context).colorScheme.error.withOpacity(0.75),
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Icon(
+              Icons.delete,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          direction: DismissDirection.endToStart,
+          confirmDismiss: (direction) async {
+            return await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Delete Item'),
+                content: Text(
+                  'Are you sure you want to remove ${groceryItem[index].name} from the list?'
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop(false);
+                    },
+                    child: const Text('No'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop(true);
+                    },
+                    child: const Text('Yes'),
+                  ),
+                ],
+              ),
+            );
+          },
+          onDismissed: (direction) async {
+            final url = Uri.https(
+              'groceryapp-cf2a5-default-rtdb.firebaseio.com',
+              '/shopping-List/${groceryItem[index].id}.json',
+            );
 
-         key: ValueKey(groceryItem[index].id),
-           child: 
-           ListTile(
+            final deletedItem = groceryItem[index];
+            
+            setState(() {
+              groceryItem.removeAt(index);
+            });
+
+            try {
+              final response = await http.delete(url);
+              
+              if (response.statusCode >= 400) {
+                // If deletion fails, reinsert the item
+                setState(() {
+                  groceryItem.insert(index, deletedItem);
+                });
+                
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to delete item.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
+
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${deletedItem.name} removed from the list.'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            } catch (error) {
+              // If there's an error, reinsert the item
+              setState(() {
+                groceryItem.insert(index, deletedItem);
+              });
+              
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Failed to delete item.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          },
+          child: ListTile(
             title: Text(groceryItem[index].name),
-            leading:Container(
+            leading: Container(
               width: 28,
               height: 28,
               color: groceryItem[index].category.color,
