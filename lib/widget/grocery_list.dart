@@ -69,23 +69,13 @@ void loadItems()async{
     );
 
     if (newItem != null) {
-      // Check if the item already exists by name
       final existingItemIndex = groceryItem.indexWhere((item) => item.name == newItem.name);
 
       if (existingItemIndex != -1) {
         // Item already exists, increment quantity by 1
         final updatedQuantity = groceryItem[existingItemIndex].quantity + 1;
         
-        setState(() {
-          groceryItem[existingItemIndex] = GroceryItem(
-            id: groceryItem[existingItemIndex].id,
-            name: groceryItem[existingItemIndex].name,
-            quantity: updatedQuantity,
-            category: groceryItem[existingItemIndex].category,
-          );
-        });
-
-        // Update the quantity on Firebase for the existing item
+        // Update the quantity on Firebase first
         final existingItemId = groceryItem[existingItemIndex].id;
         final url = Uri.https(
           'groceryapp-cf2a5-default-rtdb.firebaseio.com',
@@ -112,6 +102,16 @@ void loadItems()async{
             return;
           }
 
+          // Only update state if Firebase update was successful
+          setState(() {
+            groceryItem[existingItemIndex] = GroceryItem(
+              id: groceryItem[existingItemIndex].id,
+              name: groceryItem[existingItemIndex].name,
+              quantity: updatedQuantity,
+              category: groceryItem[existingItemIndex].category,
+            );
+          });
+
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -129,12 +129,7 @@ void loadItems()async{
           );
         }
       } else {
-        // Item doesn't exist, add as new item
-        setState(() {
-          groceryItem.add(newItem);
-        });
-
-        // Add to Firebase
+        // Add to Firebase first
         final url = Uri.https(
           'groceryapp-cf2a5-default-rtdb.firebaseio.com',
           '/shopping-List.json',
@@ -161,6 +156,20 @@ void loadItems()async{
             );
             return;
           }
+
+          final Map<String, dynamic> responseData = json.decode(response.body);
+          
+          // Only update state if Firebase add was successful
+          setState(() {
+            groceryItem.add(
+              GroceryItem(
+                id: responseData['name'], // Use Firebase-generated ID
+                name: newItem.name,
+                quantity: newItem.quantity,
+                category: newItem.category,
+              ),
+            );
+          });
 
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
