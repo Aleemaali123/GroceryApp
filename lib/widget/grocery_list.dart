@@ -5,6 +5,7 @@ import 'package:grocery_app/data/categories.dart';
 import 'package:grocery_app/data/dummy_items.dart';
 import 'package:grocery_app/models/grocery_item.dart';
 import 'package:grocery_app/widget/new_item.dart';
+import 'package:grocery_app/widget/product_detail.dart';
 import 'package:http/http.dart' as http;
 
 
@@ -26,30 +27,55 @@ void initState(){
 }
 
 
-void loadItems()async{
- final url = Uri.parse(
-      'https://groceryapp-cf2a5-default-rtdb.firebaseio.com/shopping-List.json'
-    );
-       
+void loadItems() async {
+  final url = Uri.parse(
+    'https://groceryapp-cf2a5-default-rtdb.firebaseio.com/shopping-List.json'
+  );
+     
+  try {
     final response = await http.get(url);
-    //print(response.body);
-
-    final Map<String,dynamic> listData = json.decode(response.body);
-
-    final List<GroceryItem>loadedItems = [];
-
-    for(final item in listData.entries){
-      final category = categoriesData.entries.firstWhere((categoryItem)=> categoryItem.value.title == item.value['category']).value;
-          loadedItems.add(GroceryItem(id: item.key, 
-          name: item.value['name'], 
-          quantity: item.value['quantity'], 
-          category: category
-          ));
+    
+    if (response.statusCode >= 400) {
+      setState(() {
+        groceryItem = [];
+      });
+      return;
     }
+
+    if (response.body == 'null' || response.body.isEmpty) {
+      setState(() {
+        groceryItem = [];
+      });
+      return;
+    }
+
+    final Map<String, dynamic> listData = json.decode(response.body);
+    final List<GroceryItem> loadedItems = [];
+
+    listData.forEach((key, value) {
+      final category = categoriesData.entries
+          .firstWhere((categoryItem) => 
+              categoryItem.value.title == value['category'])
+          .value;
+      
+      loadedItems.add(
+        GroceryItem(
+          id: key,
+          name: value['name'],
+          quantity: value['quantity'],
+          category: category,
+        ),
+      );
+    });
 
     setState(() {
       groceryItem = loadedItems;
     });
+  } catch (error) {
+    setState(() {
+      groceryItem = [];
+    });
+  }
 }
 
 
@@ -72,8 +98,8 @@ void loadItems()async{
       final existingItemIndex = groceryItem.indexWhere((item) => item.name == newItem.name);
 
       if (existingItemIndex != -1) {
-        // Item already exists, increment quantity by 1
-        final updatedQuantity = groceryItem[existingItemIndex].quantity + 1;
+        // Item already exists, add new quantity to existing quantity
+        final updatedQuantity = groceryItem[existingItemIndex].quantity + newItem.quantity;
         
         // Update the quantity on Firebase first
         final existingItemId = groceryItem[existingItemIndex].id;
@@ -111,14 +137,6 @@ void loadItems()async{
               category: groceryItem[existingItemIndex].category,
             );
           });
-
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Updated quantity for ${newItem.name}'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
         } catch (error) {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +147,7 @@ void loadItems()async{
           );
         }
       } else {
-        // Add to Firebase first
+        // Add new item to Firebase
         final url = Uri.https(
           'groceryapp-cf2a5-default-rtdb.firebaseio.com',
           '/shopping-List.json',
@@ -163,21 +181,13 @@ void loadItems()async{
           setState(() {
             groceryItem.add(
               GroceryItem(
-                id: responseData['name'], // Use Firebase-generated ID
+                id: responseData['name'],
                 name: newItem.name,
                 quantity: newItem.quantity,
                 category: newItem.category,
               ),
             );
           });
-
-          if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Added ${newItem.name} to the list'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
         } catch (error) {
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -303,6 +313,17 @@ void loadItems()async{
             }
           },
           child: ListTile(
+            onTap: () async {
+              final result = await Navigator.of(context).push<String>(
+                MaterialPageRoute(
+                  builder: (ctx) => ProductDetail(item: groceryItem[index]),
+                ),
+              );
+              
+              if (result == 'refresh') {
+                loadItems();
+              }
+            },
             title: Text(groceryItem[index].name),
             leading: Container(
               width: 28,

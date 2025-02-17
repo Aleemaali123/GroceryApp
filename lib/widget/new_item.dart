@@ -25,104 +25,15 @@ class _NewItemState extends State<NewItem> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      final url = Uri.https(
-        'groceryapp-cf2a5-default-rtdb.firebaseio.com',
-        '/shopping-List.json',
+      // Just return the new item data without making any Firebase calls
+      Navigator.of(context).pop(
+        GroceryItem(
+          id: '', // Empty ID since it will be handled by GroceryList
+          name: enteredName,
+          quantity: enteredQuantity,
+          category: selectedCategory,
+        ),
       );
-
-      try {
-        // First, fetch existing items
-        final getResponse = await http.get(url);
-        
-        if (getResponse.statusCode >= 400) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to check existing items. Please try again.')),
-          );
-          return;
-        }
-
-        final Map<String, dynamic> existingItems = json.decode(getResponse.body) ?? {};
-        String? existingItemId;
-        int? existingQuantity;
-
-        // Check if an item with the same name exists
-        existingItems.forEach((id, item) {
-          if (item['name'] == enteredName) {
-            existingItemId = id;
-            existingQuantity = item['quantity'];
-          }
-        });
-
-        if (existingItemId != null) {
-          // Update existing item's quantity
-          final updateUrl = Uri.https(
-            'groceryapp-cf2a5-default-rtdb.firebaseio.com',
-            '/shopping-List/$existingItemId.json',
-          );
-
-          final updateResponse = await http.patch(
-            updateUrl,
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({
-              'quantity': existingQuantity! + enteredQuantity,
-            }),
-          );
-
-          if (updateResponse.statusCode >= 400) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to update item. Please try again.')),
-            );
-            return;
-          }
-
-          if (!context.mounted) return;
-
-          // Return the updated grocery item
-          Navigator.of(context).pop(
-            GroceryItem(
-              id: existingItemId!,
-              name: enteredName,
-              quantity: existingQuantity! + enteredQuantity,
-              category: selectedCategory,
-            ),
-          );
-        } else {
-          // Add new item if it doesn't exist
-          final response = await http.post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({
-              'name': enteredName,
-              'quantity': enteredQuantity,
-              'category': selectedCategory.title,
-            }),
-          );
-
-          if (response.statusCode >= 400) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to add item. Please try again.')),
-            );
-            return;
-          }
-
-          final Map<String, dynamic> responseData = json.decode(response.body);
-
-          if (!context.mounted) return;
-
-          Navigator.of(context).pop(
-            GroceryItem(
-              id: responseData['name'],
-              name: enteredName,
-              quantity: enteredQuantity,
-              category: selectedCategory,
-            ),
-          );
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Please try again.')),
-        );
-      }
     }
   }
 
