@@ -53,15 +53,92 @@ void loadItems()async{
 }
 
 
-void addItem(BuildContext context)async{
-    await Navigator.of(context).push<GroceryItem>(
-    MaterialPageRoute(
-      builder: (ctx)=> NewItem(),
-    ));
+// void addItem(BuildContext context)async{
+//     await Navigator.of(context).push<GroceryItem>(
+//     MaterialPageRoute(
+//       builder: (ctx)=> NewItem(),
+//     ));
+// }
 
-    
-}
-void _removeItem(GroceryItem item){
+
+  void addItem(BuildContext context) async {
+    final newItem = await Navigator.of(context).push<GroceryItem>(
+      MaterialPageRoute(
+        builder: (ctx) => const NewItem(),
+      ),
+    );
+
+    // if (newItem == null) {
+    //   return; // If the user cancels adding an item, do nothing.
+    // }
+
+    if(newItem != null){
+      //check if the item already exists
+      final existingItemIndex = groceryItem.indexWhere((item)=>item.name == newItem.quantity);
+
+
+      if(existingItemIndex != -1){
+        //item already exists, update quantity
+        setState(() {
+          groceryItem[existingItemIndex].quantity + newItem.quantity;
+        });
+
+
+        //now update the quantity on firebase for the existing item
+
+        final existingItemId = groceryItem[existingItemIndex].id;
+
+        final url = Uri.https(
+          'groceryapp-cf2a5-default-rtdb.firebaseio.com',
+          '/shopping-List/$existingItemId.json',
+        );
+        await http.patch(
+          url,
+          headers: {
+            'Content - Type': 'application/json'
+          },
+          body: json.encode({
+
+            'quantity':groceryItem[existingItemIndex].quantity,
+
+          })
+        );
+      }
+      else{
+        //item doesnt exist, add item
+        setState(() {
+          groceryItem.add(newItem);
+        });
+
+        //add to firebase
+        final url = Uri.https(
+          'groceryapp-cf2a5-default-rtdb.firebaseio.com',
+          '/shopping-List.json',
+        );
+        await http.post(url,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+          body: json.encode(
+            {
+              'name' : newItem.name,
+              'quantity' : newItem.quantity,
+              'category': newItem.category.title
+            }
+          )
+
+
+        );
+      }
+    }
+
+    // setState(() {
+    //   groceryItem.add(newItem!);
+    // });
+  }
+
+
+  void _removeItem(GroceryItem item){
         setState(() {
           groceryItem.remove(item);
         });

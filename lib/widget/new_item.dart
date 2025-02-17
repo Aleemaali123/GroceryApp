@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:grocery_app/data/categories.dart';
 import 'package:grocery_app/models/category.dart';
 import 'package:grocery_app/models/grocery_item.dart';
+import 'package:http/http.dart' as http;
+
 
 class NewItem extends StatefulWidget {
   const NewItem({super.key});
@@ -17,26 +21,59 @@ class _NewItemState extends State<NewItem> {
   var selectedCategory = categoriesData[Categories.vegitables]!;
 
 
-void saveItem(){
-  if(_formKey.currentState!.validate()){
-     _formKey.currentState!.save();
-    //  print(enteredName);
-    //  print(enteredQuantity);
-    //  print(selectedCategory);
+  void saveItem() async {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
 
-    Navigator.of(context).pop(
-      GroceryItem(
-        id: DateTime.now().toString(),
-         name: enteredName, 
-         quantity: enteredQuantity, 
-         category: selectedCategory 
+      final url = Uri.https(
+        'groceryapp-cf2a5-default-rtdb.firebaseio.com',
+        '/shopping-List.json',
+      );
 
-         )
-    );
+      try {
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'name': enteredName,
+            'quantity': enteredQuantity,
+            'category': selectedCategory.title,
+          }),
+        );
+
+        if (response.statusCode >= 400) {
+          // Handle failure
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add item. Please try again.')),
+          );
+          return;
+        }
+
+        final Map<String, dynamic> responseData = json.decode(response.body);
+
+        // Ensure the context is still valid before navigating
+        if (!context.mounted) {
+          return;
+        }
+
+        // Return the new grocery item
+        Navigator.of(context).pop(
+          GroceryItem(
+            id: responseData['name'], // Use the Firebase-generated ID
+            name: enteredName,
+            quantity: enteredQuantity,
+            category: selectedCategory,
+          ),
+        );
+      } catch (e) {
+        // Handle network errors or other exceptions
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An error occurred. Please try again.')),
+        );
+      }
+    }
   }
- 
 
-}
 
   @override
   Widget build(BuildContext context) {
