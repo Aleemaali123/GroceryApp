@@ -2,14 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:grocery_app/data/categories.dart';
-import 'package:grocery_app/data/dummy_items.dart';
 import 'package:grocery_app/models/grocery_item.dart';
 import 'package:grocery_app/widget/new_item.dart';
 import 'package:grocery_app/widget/product_detail.dart';
 import 'package:http/http.dart' as http;
 import 'package:grocery_app/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
-
 
 class GroceryList extends StatefulWidget {
   const GroceryList({super.key});
@@ -18,68 +16,76 @@ class GroceryList extends StatefulWidget {
   State<GroceryList> createState() => _GroceryList();
 }
 
-
 class _GroceryList extends State<GroceryList> {
- 
-List<GroceryItem> groceryItem = [];
+  List<GroceryItem> groceryItem = [];
+  var isloading = true;
 
-void initState(){
-  super.initState();
-  loadItems();
-}
+  @override
+  void initState() {
+    super.initState();
+    loadItems();
 
-
-void loadItems() async {
-  final url = Uri.parse(
-    'https://groceryapp-cf2a5-default-rtdb.firebaseio.com/shopping-List.json'
-  );
-     
-  try {
-    final response = await http.get(url);
-    
-    if (response.statusCode >= 400) {
-      setState(() {
-        groceryItem = [];
-      });
-      return;
-    }
-
-    if (response.body == 'null' || response.body.isEmpty) {
-      setState(() {
-        groceryItem = [];
-      });
-      return;
-    }
-
-    final Map<String, dynamic> listData = json.decode(response.body);
-    final List<GroceryItem> loadedItems = [];
-
-    listData.forEach((key, value) {
-      final category = categoriesData.entries
-          .firstWhere((categoryItem) => 
-              categoryItem.value.title == value['category'])
-          .value;
-      
-      loadedItems.add(
-        GroceryItem(
-          id: key,
-          name: value['name'],
-          quantity: value['quantity'],
-          category: category,
-        ),
-      );
-    });
-
-    setState(() {
-      groceryItem = loadedItems;
-    });
-  } catch (error) {
-    setState(() {
-      groceryItem = [];
-    });
+    // Future.delayed(const Duration(milliseconds: 1), () {
+    //   if (mounted) {
+    //     setState(() {
+    //       isloading = false;
+    //     });
+    //   }
+    // });
   }
-}
 
+  void loadItems() async {
+    final url = Uri.parse(
+        'https://groceryapp-cf2a5-default-rtdb.firebaseio.com/shopping-List.json');
+
+    try {
+      final response = await http.get(url);
+
+
+
+      if (response.statusCode >= 400) {
+        setState(() {
+          groceryItem = [];
+        });
+        return;
+      }
+
+      if (response.body == 'null' || response.body.isEmpty) {
+        setState(() {
+          groceryItem = [];
+        });
+        return;
+      }
+
+      final Map<String, dynamic> listData = json.decode(response.body);
+      final List<GroceryItem> loadedItems = [];
+
+      listData.forEach((key, value) {
+        final category = categoriesData.entries
+            .firstWhere(
+                (categoryItem) => categoryItem.value.title == value['category'])
+            .value;
+
+        loadedItems.add(
+          GroceryItem(
+            id: key,
+            name: value['name'],
+            quantity: value['quantity'],
+            category: category,
+          ),
+        );
+      });
+
+      setState(() {
+        groceryItem = loadedItems;
+        isloading = false;
+      });
+    } catch (error) {
+      setState(() {
+        groceryItem = [];
+      });
+    }
+  }
 
 // void addItem(BuildContext context)async{
 //     await Navigator.of(context).push<GroceryItem>(
@@ -87,7 +93,6 @@ void loadItems() async {
 //       builder: (ctx)=> NewItem(),
 //     ));
 // }
-
 
   void addItem(BuildContext context) async {
     final newItem = await Navigator.of(context).push<GroceryItem>(
@@ -97,12 +102,14 @@ void loadItems() async {
     );
 
     if (newItem != null) {
-      final existingItemIndex = groceryItem.indexWhere((item) => item.name == newItem.name);
+      final existingItemIndex =
+          groceryItem.indexWhere((item) => item.name == newItem.name);
 
       if (existingItemIndex != -1) {
         // Item already exists, add new quantity to existing quantity
-        final updatedQuantity = groceryItem[existingItemIndex].quantity + newItem.quantity;
-        
+        final updatedQuantity =
+            groceryItem[existingItemIndex].quantity + newItem.quantity;
+
         // Update the quantity on Firebase first
         final existingItemId = groceryItem[existingItemIndex].id;
         final url = Uri.https(
@@ -111,13 +118,11 @@ void loadItems() async {
         );
 
         try {
-          final response = await http.patch(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({
-              'quantity': updatedQuantity,
-            })
-          );
+          final response = await http.patch(url,
+              headers: {'Content-Type': 'application/json'},
+              body: json.encode({
+                'quantity': updatedQuantity,
+              }));
 
           if (response.statusCode >= 400) {
             if (!context.mounted) return;
@@ -156,15 +161,13 @@ void loadItems() async {
         );
 
         try {
-          final response = await http.post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({
-              'name': newItem.name,
-              'quantity': newItem.quantity,
-              'category': newItem.category.title
-            })
-          );
+          final response = await http.post(url,
+              headers: {'Content-Type': 'application/json'},
+              body: json.encode({
+                'name': newItem.name,
+                'quantity': newItem.quantity,
+                'category': newItem.category.title
+              }));
 
           if (response.statusCode >= 400) {
             if (!context.mounted) return;
@@ -178,7 +181,7 @@ void loadItems() async {
           }
 
           final Map<String, dynamic> responseData = json.decode(response.body);
-          
+
           // Only update state if Firebase add was successful
           setState(() {
             groceryItem.add(
@@ -203,13 +206,11 @@ void loadItems() async {
     }
   }
 
-
-  void _removeItem(GroceryItem item){
-        setState(() {
-          groceryItem.remove(item);
-        });
-      }
-
+  void _removeItem(GroceryItem item) {
+    setState(() {
+      groceryItem.remove(item);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -226,12 +227,21 @@ void loadItems() async {
           Text(
             "No items in your list",
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-            ),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onBackground
+                      .withOpacity(0.6),
+                ),
           ),
         ],
       ),
     );
+
+    if (isloading) {
+      content = Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
     if (groceryItem.isNotEmpty) {
       content = Padding(
@@ -262,8 +272,7 @@ void loadItems() async {
                   builder: (ctx) => AlertDialog(
                     title: const Text('Delete Item'),
                     content: Text(
-                      'Are you sure you want to remove ${groceryItem[index].name} from the list?'
-                    ),
+                        'Are you sure you want to remove ${groceryItem[index].name} from the list?'),
                     actions: [
                       TextButton(
                         onPressed: () {
@@ -298,20 +307,20 @@ void loadItems() async {
                 );
 
                 final deletedItem = groceryItem[index];
-                
+
                 setState(() {
                   groceryItem.removeAt(index);
                 });
 
                 try {
                   final response = await http.delete(url);
-                  
+
                   if (response.statusCode >= 400) {
                     // If deletion fails, reinsert the item
                     setState(() {
                       groceryItem.insert(index, deletedItem);
                     });
-                    
+
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -338,7 +347,7 @@ void loadItems() async {
                   setState(() {
                     groceryItem.insert(index, deletedItem);
                   });
-                  
+
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -353,10 +362,11 @@ void loadItems() async {
                   onTap: () async {
                     final result = await Navigator.of(context).push<String>(
                       MaterialPageRoute(
-                        builder: (ctx) => ProductDetail(item: groceryItem[index]),
+                        builder: (ctx) =>
+                            ProductDetail(item: groceryItem[index]),
                       ),
                     );
-                    
+
                     if (result == 'refresh') {
                       loadItems();
                     }
@@ -364,8 +374,8 @@ void loadItems() async {
                   title: Text(
                     groceryItem[index].name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
                   leading: Container(
                     width: 24,
@@ -381,7 +391,10 @@ void loadItems() async {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -412,11 +425,11 @@ void loadItems() async {
               icon: const Icon(Icons.brightness_6),
               onPressed: () {
                 context.read<ThemeProvider>().toggleTheme();
-                Future.delayed(Duration(milliseconds: 500)).then((value) {
-                  setState(() {
-
-                  });
-                },);
+                Future.delayed(Duration(milliseconds: 500)).then(
+                  (value) {
+                    setState(() {});
+                  },
+                );
               },
             ),
             IconButton(
@@ -432,5 +445,3 @@ void loadItems() async {
     );
   }
 }
-
-  

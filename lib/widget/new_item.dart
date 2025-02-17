@@ -25,6 +25,10 @@ class _NewItemState extends State<NewItem> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
+      setState(() {
+
+      });
+
       // Just return the new item data without making any Firebase calls
       Navigator.of(context).pop(
         GroceryItem(
@@ -139,7 +143,7 @@ class _NewItemState extends State<NewItem> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 TextButton(
-                  onPressed: () {
+                  onPressed:   () {
                     _formKey.currentState!.reset();
                   }, 
                   child: Text('Reset')
