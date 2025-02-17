@@ -10,7 +10,7 @@ enum Categories{
   spices,
   convenience,
   hygine,
-  other
+  other, vegetables
 }
 
 

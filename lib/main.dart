@@ -1,7 +1,14 @@
+import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
+import 'package:grocery_app/widget/grocery_list.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    DevicePreview(
+      enabled: true, // Set to false in production
+      builder: (context) => MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -20,7 +27,7 @@ class MyApp extends StatelessWidget {
           scaffoldBackgroundColor: Color.fromARGB(255, 50, 58, 60)
       ),
      
-      //home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home:  GroceryList(),
     );
   }
 }
