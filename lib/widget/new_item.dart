@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:grocery_app/data/categories.dart';
 import 'package:grocery_app/models/category.dart';
 import 'package:grocery_app/models/grocery_item.dart';
+import 'package:http/http.dart' as http;
 
 class NewItem extends StatefulWidget {
   const NewItem({super.key});
@@ -17,22 +20,45 @@ class _NewItemState extends State<NewItem> {
   var selectedCategory = categoriesData[Categories.vegitables]!;
 
 
-void saveItem(){
+void saveItem()async{
   if(_formKey.currentState!.validate()){
      _formKey.currentState!.save();
     //  print(enteredName);
     //  print(enteredQuantity);
     //  print(selectedCategory);
+        final url = Uri.parse(
+          'https://groceryapp-cf2a5-default-rtdb.firebaseio.com/shopping-List.json');
 
-    Navigator.of(context).pop(
-      GroceryItem(
-        id: DateTime.now().toString(),
-         name: enteredName, 
-         quantity: enteredQuantity, 
-         category: selectedCategory 
+    final response =   await  http.post(url,
+    headers: {
+          'Content-type': "application/json",
+        },
+           body: json.encode({
+                 'name': enteredName, 
+                 'quantity': enteredQuantity, 
+                 'category': selectedCategory.title
+           })
+        
+        );
 
-         )
-    );
+       print(response.body);
+       print(response.statusCode);
+
+if(!context.mounted){
+  return;
+}
+
+       Navigator.of(context).pop();
+
+    // Navigator.of(context).pop(
+    //   GroceryItem(
+    //     id: DateTime.now().toString(),
+    //      name: enteredName, 
+    //      quantity: enteredQuantity, 
+    //      category: selectedCategory 
+
+    //      )
+    // );
   }
  
 

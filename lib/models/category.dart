@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+
+//enum means  fixed and predefined..
 enum Categories{
   vegitables,
   fruit,
