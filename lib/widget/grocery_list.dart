@@ -7,6 +7,8 @@ import 'package:grocery_app/models/grocery_item.dart';
 import 'package:grocery_app/widget/new_item.dart';
 import 'package:grocery_app/widget/product_detail.dart';
 import 'package:http/http.dart' as http;
+import 'package:grocery_app/providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 
 
 class GroceryList extends StatefulWidget {
@@ -212,147 +214,221 @@ void loadItems() async {
   @override
   Widget build(BuildContext context) {
     Widget content = Center(
-      child: Text(
-        "No item added yet..."
-        ),
-        );
-
-        if(groceryItem.isNotEmpty){
-        content=   ListView.builder(
-        itemCount:groceryItem.length,
-        itemBuilder: (context, index) => Dismissible(
-          key: ValueKey(groceryItem[index].id),
-          background: Container(
-            color: Theme.of(context).colorScheme.error.withOpacity(0.75),
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 20),
-            child: const Icon(
-              Icons.delete,
-              color: Colors.white,
-              size: 32,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.shopping_basket_outlined,
+            size: 64,
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "No items in your list",
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
             ),
           ),
-          direction: DismissDirection.endToStart,
-          confirmDismiss: (direction) async {
-            return await showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Delete Item'),
-                content: Text(
-                  'Are you sure you want to remove ${groceryItem[index].name} from the list?'
+        ],
+      ),
+    );
+
+    if (groceryItem.isNotEmpty) {
+      content = Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView.builder(
+          itemCount: groceryItem.length,
+          itemBuilder: (context, index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Dismissible(
+              key: ValueKey(groceryItem[index].id),
+              background: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop(false);
-                    },
-                    child: const Text('No'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(ctx).pop(true);
-                    },
-                    child: const Text('Yes'),
-                  ),
-                ],
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.white,
+                  size: 32,
+                ),
               ),
-            );
-          },
-          onDismissed: (direction) async {
-            final url = Uri.https(
-              'groceryapp-cf2a5-default-rtdb.firebaseio.com',
-              '/shopping-List/${groceryItem[index].id}.json',
-            );
-
-            final deletedItem = groceryItem[index];
-            
-            setState(() {
-              groceryItem.removeAt(index);
-            });
-
-            try {
-              final response = await http.delete(url);
-              
-              if (response.statusCode >= 400) {
-                // If deletion fails, reinsert the item
-                setState(() {
-                  groceryItem.insert(index, deletedItem);
-                });
-                
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to delete item.'),
-                    duration: Duration(seconds: 2),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (direction) async {
+                return await showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Delete Item'),
+                    content: Text(
+                      'Are you sure you want to remove ${groceryItem[index].name} from the list?'
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop(false);
+                        },
+                        child: Text(
+                          'No',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop(true);
+                        },
+                        child: Text(
+                          'Yes',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 );
-                return;
-              }
+              },
+              onDismissed: (direction) async {
+                final url = Uri.https(
+                  'groceryapp-cf2a5-default-rtdb.firebaseio.com',
+                  '/shopping-List/${groceryItem[index].id}.json',
+                );
 
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${deletedItem.name} removed from the list.'),
-                  duration: const Duration(seconds: 2),
+                final deletedItem = groceryItem[index];
+                
+                setState(() {
+                  groceryItem.removeAt(index);
+                });
+
+                try {
+                  final response = await http.delete(url);
+                  
+                  if (response.statusCode >= 400) {
+                    // If deletion fails, reinsert the item
+                    setState(() {
+                      groceryItem.insert(index, deletedItem);
+                    });
+                    
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Failed to delete item.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${deletedItem.name} removed from the list.',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                } catch (error) {
+                  // If there's an error, reinsert the item
+                  setState(() {
+                    groceryItem.insert(index, deletedItem);
+                  });
+                  
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to delete item.'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child: Card(
+                child: ListTile(
+                  onTap: () async {
+                    final result = await Navigator.of(context).push<String>(
+                      MaterialPageRoute(
+                        builder: (ctx) => ProductDetail(item: groceryItem[index]),
+                      ),
+                    );
+                    
+                    if (result == 'refresh') {
+                      loadItems();
+                    }
+                  },
+                  title: Text(
+                    groceryItem[index].name,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  leading: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: groceryItem[index].category.color,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      groceryItem[index].quantity.toString(),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-              );
-            } catch (error) {
-              // If there's an error, reinsert the item
-              setState(() {
-                groceryItem.insert(index, deletedItem);
-              });
-              
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Failed to delete item.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          },
-          child: ListTile(
-            onTap: () async {
-              final result = await Navigator.of(context).push<String>(
-                MaterialPageRoute(
-                  builder: (ctx) => ProductDetail(item: groceryItem[index]),
-                ),
-              );
-              
-              if (result == 'refresh') {
-                loadItems();
-              }
-            },
-            title: Text(groceryItem[index].name),
-            leading: Container(
-              width: 28,
-              height: 28,
-              color: groceryItem[index].category.color,
+              ),
             ),
-            trailing: Text(groceryItem[index].quantity.toString()),
           ),
         ),
-        
-        );
-        
-        }
-        
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Your Groceries'),
-        actions: [
-          IconButton(
-          onPressed: () {
-            addItem(context);
-          }, 
-          icon: Icon(Icons.add)
-          )
-          ],
-        centerTitle: true,
-      ),
+      );
+    }
 
-      body:content
+    return AnimatedTheme(
+      data: Theme.of(context),
+      duration: const Duration(milliseconds: 300),
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        appBar: AppBar(
+          title: const Text('Your Groceries'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.brightness_6),
+              onPressed: () {
+                context.read<ThemeProvider>().toggleTheme();
+                Future.delayed(Duration(milliseconds: 500)).then((value) {
+                  setState(() {
+
+                  });
+                },);
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                addItem(context);
+              },
+            ),
+          ],
+        ),
+        body: content,
+      ),
     );
   }
 }
